@@ -1,0 +1,125 @@
+{%extends 'base.html'%}
+{%block start%}
+<div class="container border p-4 mt-5 mb-5" style="max-width:500px; ">
+<div class="alert alert-danger p-4 text-center">please fill adress form </div>
+
+    <form class="needs-validation" novalidate action="{%url 'app:user_address'%}" method="POST">
+        {% csrf_token %}
+
+
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label for="validationCustom03">City</label>
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" id="validationCustom03" placeholder="City" required  name="city">
+                <div class="invalid-feedback">
+                    Please provide a valid city.
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label for="validationCustom04">State</label>
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" id="validationCustom04" placeholder="State" required name="state">
+                <div class="invalid-feedback">
+                    Please provide a valid state.
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label for="validationCustom05">Zip</label>            
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" id="validationCustom05" placeholder="Zip" required name="zip">
+                <div class="invalid-feedback">
+                    Please provide a valid zip.
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label for="validationCustom05">Street</label>            
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" id="validationCustom06" placeholder="street" required name="street">
+                <div class="invalid-feedback">
+                    Please provide a valid street
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label>landmark</label>            
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" placeholder="landmark" required name="landmark">
+                <div class="invalid-feedback">
+                    Please provide a valid landmark
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label>mobile</label>            
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" id="validationCustom05" placeholder="mobile" name="mobile">                
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="col-md-3 mb-3">
+                <label >alternate mobile</label>            
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control" placeholder="alternate mobile" name="alternte_mobile">
+                
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="" id="invalidCheck" required name="invalidCheck">
+                <label class="form-check-label" for="invalidCheck">
+                    Agree to terms and conditions
+                </label>
+                <div class="invalid-feedback">
+                    You must agree before submitting.
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Submit form</button>
+    </form>
+</div>
+<script>
+    // Example starter JavaScript for disabling form submissions if there are invalid fields
+    (function () {
+        'use strict';
+        window.addEventListener('load', function () {
+            // Fetch all the forms we want to apply custom Bootstrap validation styles to
+            var forms = document.getElementsByClassName('needs-validation');
+            // Loop over them and prevent submission
+            var validation = Array.prototype.filter.call(forms, function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })();
+</script>
+
+
+{%endblock%}
