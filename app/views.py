@@ -12,18 +12,36 @@ from django.db.models import Sum
 import json
 from accounts import utils
 from accounts.models import address
+from decimal import Decimal
+from django.db.models.functions import Coalesce
+from collections import defaultdict
+
+
+
+
+
+
+
+
+def calculate_variant_prices(cart):
+    variant_info = defaultdict(lambda:{'discount_price':0, 'total_price':0,'variant':''})
+    cart_items = CartItem.objects.filter(cart = cart)
+
+    for cart_item in cart_items:
+        variant = cart_item.stock_variant
+        quantity = cart_item.quantity
+        price_per_variant = variant.variant.price.price
+        price_per_variant_discount = variant.variant.price.sale_price
+
+        variant_info[variant]['discount_price'] += price_per_variant_discount * quantity
+        variant_info[variant]['total_price'] += quantity * price_per_variant
+        variant_info[variant]['variant'] = variant
+    
+    return variant_info
 
 
 # Create your views here.
 def index(request):
-    # categories = Category.objects.all()
-    # products_by_cat = {}
-    # for category in categories:
-    #     products = Product.objects.filter(category = category)
-    #     print("producs is : ",  products)
-    #     products_by_cat[category] = products
-
-    # print(products_by_cat)
     categories = Category.objects.all()
     categories_with_variants = []
 
@@ -103,35 +121,28 @@ def add_to_cart(request):
     else:
         messages.success(request,"not available")
         return redirect('product/'+variant_redirect.slug)
-    
-                        
-    
-            
+                                  
     
 
 
 def view_cart(request):        
-    discount = 0
-    actual_price = 0
-    total_actual = 0
-    size = 0
 
     if request.user.is_authenticated:
-        user_cart, created = Cart.objects.get_or_create(user = request.user)
+        cart_items = CartItem.objects.filter(cart__user=request.user)
+        cart , createad = Cart.objects.get_or_create(user = request.user)
     else:
+        # Retrieve or create a cart using session ID
         session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-        user_cart , created = Cart.objects.get_or_create(session_key = session_key)
+        cart, created = Cart.objects.get_or_create(session_key=session_key)
+        cart_items = cart.cart_items.all()
+    
 
     if request.method == 'POST':
         variant_id = request.POST.get('variant_id')
         action = request.POST.get('action')
 
-        if variant_id and action:
-            variant = ProductVariants.objects.get(uid = variant_id)
-            cart_item = user_cart.cart_items.filter(variant = variant).first()
+        if variant_id and action:            
+            cart_item = CartItem.objects.filter(stock_variant = variant_id).first()
 
             if action == 'add':
                 if cart_item:
@@ -139,7 +150,8 @@ def view_cart(request):
                     print("\n\n\nn\n add is in progress \n\n\n\n\n")
                     cart_item.save()
                 else:
-                    CartItem.objects.create(cart = user_cart, variant = variant, quantity = 1)
+                    CartItem.objects.create(cart = cart, stock_variant = variant_id, quantity = 1)
+                    
             elif action == 'decrease':
                 if cart_item and cart_item.quantity> 1:
                     cart_item.quantity -=1
@@ -148,29 +160,12 @@ def view_cart(request):
                 if cart_item:
                     cart_item.delete()
 
-
-    cart_items = user_cart.cart_items.values('variant').annotate(
-        total_quantity = Sum('quantity'),
-        total_price = Sum('variant__price__price') * Sum('quantity'),
-        total_sale_price = Sum('variant__price__sale_price') * Sum('quantity')
-    )
-
-    update_cart_items = []
-
-    for item in cart_items:
-        variant_uuid = item['variant']
-        variant = ProductVariants.objects.get(uid = variant_uuid)
-        item['variant'] = variant
-        update_cart_items.append(item)                                            
     
+    variant_info = calculate_variant_prices(cart)
+    
+    return render(request, 'app/cart.html',{'cart_items':cart_items, 'variant_info':variant_info.values()})        
 
 
-    total_price = sum(item['total_price'] for item in cart_items )
-    total_sale_price = sum(item['total_sale_price'] for item in cart_items )    
-    discount = total_price - total_sale_price
-    user = request.user
-
-    return render(request, 'app/cart.html',{'cart_items':update_cart_items, 'total_price':total_price, 'discount':discount, 'total_actual':total_actual })        
     
 
     
@@ -221,74 +216,38 @@ def user_address(request):
 
 def checkout(request):        
     discount = 0
-    actual_price = 0
-    total_actual = 0
+    total_amount = 0
+    total_discounted_price = 0
     size = 0
 
     if request.user.is_authenticated:
-        user_cart, created = Cart.objects.get_or_create(user = request.user)
+        cart_item = CartItem.objects.filter(cart__user=request.user)
+        cart , createad = Cart.objects.get_or_create(user = request.user)
     else:
         session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-        user_cart , created = Cart.objects.get_or_create(session_key = session_key)
+        cart, created = Cart.objects.get_or_create(session_key=session_key)
+        cart_item = cart.cart_items.all()
+            
 
-    if request.method == 'POST':
-        variant_id = request.POST.get('variant_id')
-        action = request.POST.get('action')
-
-        if variant_id and action:
-            variant = ProductVariants.objects.get(uid = variant_id)
-            cart_item = user_cart.cart_items.filter(variant = variant).first()
-
-            if action == 'add':
-                if cart_item:
-                    cart_item.quantity +=1
-                    print("\n\n\nn\n add is in progress \n\n\n\n\n")
-                    cart_item.save()
-                else:
-                    CartItem.objects.create(cart = user_cart, variant = variant, quantity = 1)
-            elif action == 'decrease':
-                if cart_item and cart_item.quantity> 1:
-                    cart_item.quantity -=1
-                    cart_item.save()
-            elif action == 'remove':
-                if cart_item:
-                    cart_item.delete()
-
-
-    cart_items = user_cart.cart_items.values('variant').annotate(
-        total_quantity = Sum('quantity'),
-        total_price = Sum('variant__price__price') * Sum('quantity'),
-        total_sale_price = Sum('variant__price__sale_price') * Sum('quantity')
-    )
-
-    update_cart_items = []
-
-    for item in cart_items:
-        variant_uuid = item['variant']
-        variant = ProductVariants.objects.get(uid = variant_uuid)
-        item['variant'] = variant
-        update_cart_items.append(item)                                            
+    
+    for cart_itm in cart_item:
+        total_amount += cart_itm.stock_variant.variant.price.price * cart_itm.quantity        
+        total_discounted_price += cart_itm.stock_variant.variant.price.sale_price * cart_itm.quantity
     
 
-
-    total_price = sum(item['total_price'] for item in cart_items )
-    total_sale_price = sum(item['total_sale_price'] for item in cart_items )    
-    discount = total_price - total_sale_price
+    variant_info = calculate_variant_prices(cart)
         
     user = request.user
     if utils.has_filled_address(user):
 
-        if total_sale_price > 0:        
+        if total_discounted_price > 0:        
             client = razorpay.Client(auth=(settings.KEY_ID, settings.KEY_SECRET))        
-            data = { "amount": int(total_sale_price*100) , "currency": "INR", "receipt": "order_rcptid_11" }    
+            data = { "amount": int(total_discounted_price*100) , "currency": "INR", "receipt": "order_rcptid_11" }    
             payment = client.order.create(data=data)
             print("\n data is : ", payment)
 
-            return render(request, 'app/checkout.html',{'cart_items':update_cart_items, 'total_price':total_price, 'discount':discount, 'total_actual':total_sale_price,'payment':payment })
-        return render(request, 'app/checkout.html',{'cart_items':update_cart_items, 'total_price':total_price, 'discount':discount, 'total_actual':total_actual })    
+            return render(request, 'app/checkout.html',{'cart_items':cart_item, 'total_price':total_amount, 'discount':total_amount - total_discounted_price, 'total_actual':total_discounted_price,'payment':payment ,'variant_info':variant_info.values()})
+        return render(request, 'app/checkout.html',{'cart_items':cart_item, 'total_price':total_amount, 'discount':total_amount - total_discounted_price, 'total_actual':total_discounted_price ,'variant_info':variant_info.values()})    
         # return render(request, 'app/cart.html')
     else:
         return render(request, 'accounts/address_form.html')

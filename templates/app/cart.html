@@ -18,51 +18,55 @@
                                 <th scope="col" class="text-right" width="200"> </th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {%for item in cart_items %}
-
-
+                        <tbody>             
+                            {%for items in cart_items%}
+                            
                             <tr>
                                 <td class="text-center" >
                                     <figure class="itemside">
-                                        <div class="aside"><img src="/media/{{item.variant.variantimages.first.image}}"
+                                        <div class="aside"><img src="/media/{{items.stock_variant.variant.variantimages.first.image}}"
                                                 class="img-sm"></div>
                                         <figcaption class="info">
-                                            <a href="{%url 'app:product-details' item.variant.slug%}"
-                                                class="title text-dark">{{item.variant.product.name}} &amp;
-                                                {{item.variant.vairantName}}</a>
-                                            <p class="text-muted small">Size: {{item.variant.size}}, Color:
-                                                {{item.variant.color }}, <br> Brand: {{item.variant.product.Brand}}</p>
+                                            <a href="{%url 'app:product-details' items.stock_variant.variant.slug%}"
+                                                class="title text-dark">{{items.stock_variant.variant.product.name}} &amp;
+                                                {{items.stock_variant.variant.vairantName}}</a>
+                                            <p class="text-muted small">Size: {{items.stock_variant.sizes}}, Color:
+                                                {{items.stock_variant.colors }}, <br> Brand: {{items.stock_variant.variant.product.brand}}</p>
                                         </figcaption>
                                     </figure>
                                 </td>
                                 <td class="text-center">
-                                    {{item.total_quantity}}
+                                    {{items.quantity}}
                                 </td>
                                 <td>
                                     <div class="price-wrap">
-                                        <var class="price"> &#x20B9;{{item.total_sale_price}}</var>
-                                        <small class="text-muted"> &#x20B9;{{item.variant.price}} each </small>
+
+                                    {% for stock in variant_info %}
+                                    {% if stock.variant == items.stock_variant %}
+                                        <var class="price"> &#x20B9;{{stock.discount_price}}</var>
+                                        <small class="text-muted"> &#x20B9;{{stock.total_price}} each </small>
+                                        {%endif%}
+                                        {%endfor%}
                                     </div> <!-- price-wrap .// -->
                                 </td>
                                 <td class="text-right " style="display:flex;justify-content: space-evenly;">
                                     <form method="post" action="{% url 'app:cart' %}">
                                         {% csrf_token %}
-                                        <input type="hidden" name="variant_id" value="{{ item.variant.uid }}">
+                                        <input type="hidden" name="variant_id" value="{{ items.stock_variant.uid }}">
                                         <input type="hidden" name="action" value="decrease">
                                         <button type="submit" id='button-minus' class="btn btn-outline-primary"
                                             \>-</button>
                                     </form>
                                     <form method="post" action="{% url 'app:cart' %}">
                                         {% csrf_token %}
-                                        <input type="hidden" name="variant_id" value="{{ item.variant.uid }}">
+                                        <input type="hidden" name="variant_id" value="{{  items.stock_variant.uid }}">
                                         <input type="hidden" name="action" value="add">
                                         <button type="submit" id='button-plus'
                                             class="btn btn-outline-primary">+</button>
                                     </form>
                                     <form method="post" action="{% url 'app:cart' %}">
                                         {% csrf_token %}
-                                        <input type="hidden" name="variant_id" value="{{item.variant.uid}}">
+                                        <input type="hidden" name="variant_id" value="{{ items.stock_variant.uid}}">
                                         <input type="hidden" name="action" value="remove">
                                         <button type="submit" id='button-remove'
                                             class="btn btn-outline-primary">remove</button>

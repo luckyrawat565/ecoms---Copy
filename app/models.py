@@ -2,7 +2,9 @@ from django.db import models
 from base.models import BaseModel
 from django.contrib.auth.models import User
 from django.utils.text import slugify
-
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
+from collections import defaultdict
 # Create your models here.
 
 
@@ -181,7 +183,11 @@ class Supplier(BaseModel):
 class Cart(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places = 2, default = 0)
 
+    def update_total_amount(self):
+        self.total_amount = sum(item.total_price for item in self.cart_items.all())
+        self.save()
 
     def __str__(self):
         return str(self.user)
@@ -191,8 +197,10 @@ class CartItem(BaseModel):
     stock_variant = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name="stock_cart_variant")
     quantity = models.PositiveIntegerField(default=1)
 
-    def __str__(self):
-        return f"CartItem: {self.variant.product.name} ({self.variant.vairantName})"
+    def total_price(self):
+        return self.stock_variant.variant.price * self.quantity
     
-
-
+    
+    def __str__(self):
+        return f"CartItem: {self.cart.user} "
+    
